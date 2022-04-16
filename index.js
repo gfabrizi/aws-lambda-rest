@@ -3,12 +3,42 @@ import { res } from "./src/res.mjs";
 
 let app = APP(res);
 
-app.get('/api', (res) => {
-    res.send('Risposta da /api', 200);
+let users = [
+    {
+        'id': 1,
+        'firstname': 'John',
+        'lastname': 'Doe'
+    },
+    {
+        'id': 2,
+        'firstname': 'Jane',
+        'lastname': 'Doe'
+    },
+    {
+        'id': 3,
+        'firstname': 'Richard',
+        'lastname': 'Benson'
+    }
+];
+
+app.get('/users', (res) => {
+    res.json(users, 200);
+});
+
+app.get('/users/{id}', (res, id) => {
+    let user = users.find((entry) => {
+        return entry.id === parseInt(id);
+    });
+
+    if (!user) {
+        res.json('User not found', 404);
+    } else {
+        res.json(user, 200);
+    }
 });
 
 app.get('/test', (res) => {
-    res.send('Risposta da /test', 200);
+    res.json('Risposta da /test', 200);
 });
 
 let handler = async (event, context) => {
