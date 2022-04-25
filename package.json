@@ -1,9 +1,9 @@
 {
-  "name": "ec-module-example",
+  "name": "function-url-demo",
   "type": "module",
-  "description": "This package will be treated as an ES module.",
+  "description": "AWS Lambda function url demo",
   "version": "1.0",
   "main": "index.js",
-  "author": "Dan Fox",
+  "author": "Gianluca Fabrizi",
   "license": "ISC"
 }

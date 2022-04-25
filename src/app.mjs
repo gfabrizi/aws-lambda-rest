@@ -7,52 +7,61 @@ function app(res) {
         'DELETE': [],
     };
 
-    function get(path, cb) {
+    function _get(path, cb) {
         routes['GET'].push({
             'path': path,
             'cb': cb,
         });
     }
 
-    function post(path, cb) {
+    function _post(path, cb) {
         routes['POST'].push({
             'path': path,
             'cb': cb,
         });
     }
 
-    function put(path, cb) {
+    function _put(path, cb) {
         routes['PUT'].push({
             'path': path,
             'cb': cb,
         });
     }
 
-    function patch(path, cb) {
+    function _patch(path, cb) {
         routes['PATCH'].push({
             'path': path,
             'cb': cb,
         });
     }
 
-    function del(path, cb) {
+    function _delete(path, cb) {
         routes['DELETE'].push({
             'path': path,
             'cb': cb,
         });
     }
 
-    function handle(request) {
-        let routeParameters = [res];
+    function handle(event) {
+        let req = {};
 
-        let route = routes[request.http.method].find((entry) => {
-            let parsedPath = parseRoutePath(entry.path, request.http.path);
+        // se il method è uno di questi e event.body è dichiarato, allora imposto il body della request
+        // NOTA: qui per 'request' intendo la richiesta che passo alla mia callback, NON la chiamata web alla url
+        if (event.body && ['POST', 'PUT', 'PATCH'].includes(event.requestContext.http.method)) {
+            req.body = JSON.parse(event.body);
+        }
+
+        let routeParameters = [req, res];
+
+        // cerco una eventuale rotta che match-i il path che mi arriva dalla chiamata
+        let route = routes[event.requestContext.http.method].find((entry) => {
+            let parsedPath = parseRoutePath(entry.path, event.requestContext.http.path);
             if (parsedPath !== false) {
                 routeParameters.push(parsedPath);
                 return true;
             }
 
-            return entry.path === request.http.path;
+            return entry.path === event.requestContext.http.path;
         });
 
         if (route && (typeof route.cb === 'function')) {
@@ -66,13 +75,16 @@ function app(res) {
         let routeParameters = [];
         let match = true;
 
+        // esplodo la route impostata dall'app e il path passato dalla chiamata in due array separando le stringhe sui '/'
         const routeParams = route.split('/');
         const pathParams = path.split('/');
 
+        // se i due array hanno lunghezze diverse, posso essere sicuro che la rotta non corrisponda
         if (routeParams.length !== pathParams.length) {
             return false;
         }
 
+        // mi ciclo i due array per controllare che la rotta match-i e imposto le variabili placeholder se presenti
         for (let i = 0; i < routeParams.length; i++) {
             if (routeParams[i] === pathParams[i]) {
                 continue;
@@ -89,12 +101,12 @@ function app(res) {
     }
 
     return {
-        'get': get,
-        'post': post,
-        'put': put,
-        'patch': patch,
-        'del': del,
-        'handle': handle
+        'get': _get,
+        'post': _post,
+        'put': _put,
+        'patch': _patch,
+        'delete': _delete,
+        'handle': handle,
     }
 }
 

@@ -24,10 +24,15 @@ function resFunction() {
         return response;
     }
 
+    function reset() {
+        response = {};
+    }
+
     return {
         'send': send,
         'json': json,
-        'getResponse': getResponse
+        'getResponse': getResponse,
+        'reset': reset,
     };
 }
 
