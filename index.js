@@ -3,85 +3,100 @@ import { res } from "./src/res.mjs";
 
 let app = APP(res);
 
-let users = [
+let devs = [
     {
         'id': 1,
-        'firstname': 'John',
-        'lastname': 'Doe'
+        'firstname': 'Davide',
+        'lastname': 'Dell\'Erba'
     },
     {
         'id': 2,
-        'firstname': 'Jane',
-        'lastname': 'Doe'
+        'firstname': 'Gianluca',
+        'lastname': 'Fabrizi'
     },
     {
         'id': 3,
-        'firstname': 'Richard',
-        'lastname': 'Benson'
+        'firstname': 'Gianluca',
+        'lastname': 'Benucci'
+    },
+    {
+        'id': 4,
+        'firstname': 'Paolo',
+        'lastname': 'Romagnoli'
+    },
+    {
+        'id': 5,
+        'firstname': 'Andrea',
+        'lastname': 'Grassi'
+    },
+    {
+        'id': 6,
+        'firstname': 'Simone',
+        'lastname': 'Bellezza'
     }
 ];
 
-app.get('/users', (req, res) => {
-    res.json(users, 200);
+app.get('/devs', (req, res) => {
+    res.json(devs, 200);
 });
 
 // Create
-app.post('/users', (req, res) => {
+app.post('/devs', (req, res) => {
     // In un mondo ideale, qui faremmo una validazione dei dati in input
-    const ids = users.map(user => {
-        return user.id;
+    const ids = devs.map(dev => {
+        return dev.id;
     });
 
     const maxId = Math.max(...ids);
 
-    let user = {
+    let dev = {
         'id': maxId + 1,
         'firstname': req.body.firstname,
         'lastname': req.body.lastname,
     }
 
-    users.push(user);
+    devs.push(dev);
 
-    res.json(user, 200);
+    res.json(dev, 200);
 });
 
 // Retrieve
-app.get('/users/{id}', (req, res, id) => {
-    let user = users.find((entry) => {
+app.get('/devs/{id}', (req, res, id) => {
+    let dev = devs.find((entry) => {
         return entry.id === parseInt(id);
     });
 
-    if (!user) {
-        res.json(`User ${id} not found`, 404);
+    if (!dev) {
+        res.json(`Dev ${id} not found`, 404);
     } else {
-        res.json(user, 200);
+        res.json(dev, 200);
     }
 });
 
 // Update
-app.put('/users/{id}', (req, res, id) => {
+app.put('/devs/{id}', (req, res, id) => {
     // In un mondo ideale, qui faremmo una validazione dei dati in input
-    let updateIndex = users.map(user => user.id).indexOf(parseInt(id));
+    let updateIndex = devs.map(dev => dev.id).indexOf(parseInt(id));
 
     if (updateIndex !== -1) {
-        users[updateIndex].firstname = req.body.firstname;
-        users[updateIndex].lastname = req.body.lastname;
-        res.json(users[updateIndex], 200);
+        devs[updateIndex].firstname = req.body.firstname;
+        devs[updateIndex].lastname = req.body.lastname;
+        res.json(devs[updateIndex], 200);
     } else {
-        res.json(`User ${id} not found`, 404);
+        res.json(`Dev ${id} not found`, 404);
     }
 });
 
 // Delete
-app.delete('/users/{id}', (req, res, id) => {
+app.delete('/devs/{id}', (req, res, id) => {
     // In un mondo ideale, qui faremmo una validazione dei dati in input
-    let removeIndex = users.map(user => user.id).indexOf(parseInt(id));
+    let removeIndex = devs.map(dev => dev.id).indexOf(parseInt(id));
 
     if (removeIndex !== -1) {
-        res.json(users[removeIndex], 200);
-        users.splice(removeIndex, 1);
+        res.json(devs[removeIndex], 200);
+        devs.splice(removeIndex, 1);
     } else {
-        res.json(`User ${id} not found`, 404);
+        res.json(`Dev ${id} not found`, 404);
     }
 });
 
