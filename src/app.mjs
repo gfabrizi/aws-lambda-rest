@@ -42,8 +42,8 @@ function app(res) {
         });
     }
 
-    function handle(event) {
-        let req = {};
+    async function handle(event) {
+        let req = { 'body': {} };
 
         // se il method è uno di questi e event.body è dichiarato, allora imposto il body della request
         // NOTA: qui per 'request' intendo la richiesta che passo alla mia callback, NON la chiamata web alla url
@@ -57,7 +57,7 @@ function app(res) {
         let route = routes[event.requestContext.http.method].find((entry) => {
             let parsedPath = parseRoutePath(entry.path, event.requestContext.http.path);
             if (parsedPath !== false) {
-                routeParameters.push(parsedPath);
+                routeParameters.push(...parsedPath);
                 return true;
             }
 
@@ -65,7 +65,7 @@ function app(res) {
         });
 
         if (route && (typeof route.cb === 'function')) {
-            route.cb(...routeParameters);
+            await route.cb(...routeParameters);
         } else {
             res.send('Route not found', 404)
         }

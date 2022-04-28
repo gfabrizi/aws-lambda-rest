@@ -1,108 +1,127 @@
+// Grazie AWS per non voler supportare degnamente i moduli ESM
+// https://github.com/aws/aws-sdk-js-v3/issues/3230
+import AWS from "/var/runtime/node_modules/aws-sdk/lib/aws.js";
+
+const { randomUUID } = await import('crypto');
 import { app as APP } from "./src/app.mjs"
 import { res } from "./src/res.mjs";
+import { validateBody, validateUuid } from "./src/validate.mjs";
 
+const docClient = new AWS.DynamoDB.DocumentClient();
 let app = APP(res);
+let dbParams;
 
-let devs = [
-    {
-        'id': 1,
-        'firstname': 'Davide',
-        'lastname': 'Dell\'Erba'
-    },
-    {
-        'id': 2,
-        'firstname': 'Gianluca',
-        'lastname': 'Fabrizi'
-    },
-    {
-        'id': 3,
-        'firstname': 'Gianluca',
-        'lastname': 'Benucci'
-    },
-    {
-        'id': 4,
-        'firstname': 'Paolo',
-        'lastname': 'Romagnoli'
-    },
-    {
-        'id': 5,
-        'firstname': 'Andrea',
-        'lastname': 'Grassi'
-    },
-    {
-        'id': 6,
-        'firstname': 'Simone',
-        'lastname': 'Bellezza'
+app.get('/devs', async (req, res) => {
+    try {
+        let devs = await docClient.scan(dbParams).promise();
+        res.json(devs.Items, 200);
+    } catch (err) {
+        res.json(err, 500);
     }
-];
-
-app.get('/devs', (req, res) => {
-    res.json(devs, 200);
 });
 
 // Create
-app.post('/devs', (req, res) => {
-    // In un mondo ideale, qui faremmo una validazione dei dati in input
-    const ids = devs.map(dev => {
-        return dev.id;
-    });
+app.post('/devs', async (req, res) => {
+    if (!validateBody(req.body)) {
+        res.json('Input validation error!', 500);
+        return;
+    }
 
-    const maxId = Math.max(...ids);
-
-    let dev = {
-        'id': maxId + 1,
+    dbParams.Item = {
+        'uuid': randomUUID(),
         'firstname': req.body.firstname,
         'lastname': req.body.lastname,
     }
 
-    devs.push(dev);
-
-    res.json(dev, 200);
+    try {
+        await docClient.put(dbParams).promise();
+        res.json(dbParams.Item, 200);
+    } catch (err) {
+        res.json(err, 500);
+    }
 });
 
 // Retrieve
-app.get('/devs/{id}', (req, res, id) => {
-    let dev = devs.find((entry) => {
-        return entry.id === parseInt(id);
-    });
+app.get('/devs/{uuid}', async (req, res, uuid) => {
+    if (!validateUuid(uuid)) {
+        res.json('Input validation error!', 500);
+        return;
+    }
 
-    if (!dev) {
-        res.json(`Dev ${id} not found`, 404);
-    } else {
-        res.json(dev, 200);
+    dbParams.Key = { 'uuid': uuid };
+
+    try {
+        let dev = await docClient.get(dbParams).promise();
+
+        if (Object.keys(dev).length === 0) {
+            res.json(`Dev ${uuid} not found`, 404);
+        } else {
+            res.json(dev, 200);
+        }
+    } catch (err) {
+        res.json(err, 500);
     }
 });
 
 // Update
-app.put('/devs/{id}', (req, res, id) => {
-    // In un mondo ideale, qui faremmo una validazione dei dati in input
-    let updateIndex = devs.map(dev => dev.id).indexOf(parseInt(id));
+app.put('/devs/{uuid}', async (req, res, uuid) => {
+    if (!validateBody(req.body) || !validateUuid(uuid)) {
+        res.json('Input validation error!', 500);
+        return;
+    }
 
-    if (updateIndex !== -1) {
-        devs[updateIndex].firstname = req.body.firstname;
-        devs[updateIndex].lastname = req.body.lastname;
-        res.json(devs[updateIndex], 200);
-    } else {
-        res.json(`Dev ${id} not found`, 404);
+    dbParams.Key = { 'uuid': uuid };
+    dbParams.UpdateExpression = 'set #FN = :fn, #LN = :ln';
+    dbParams.ExpressionAttributeNames = {
+        '#FN' : 'firstname',
+        '#LN' : 'lastname',
+    };
+    dbParams.ExpressionAttributeValues = {
+        ':fn' : req.body.firstname,
+        ':ln' : req.body.lastname,
+    }
+
+    let dev = {
+        'uuid': uuid,
+        'firstname': req.body.firstname,
+        'lastname': req.body.lastname,
+    }
+
+    try {
+        await docClient.update(dbParams).promise();
+        res.json(dev, 200);
+    } catch (err) {
+        res.json(err, 500);
     }
 });
 
 // Delete
-app.delete('/devs/{id}', (req, res, id) => {
-    // In un mondo ideale, qui faremmo una validazione dei dati in input
-    let removeIndex = devs.map(dev => dev.id).indexOf(parseInt(id));
+app.delete('/devs/{uuid}', async (req, res, uuid) => {
+    if (!validateUuid(uuid)) {
+        res.json('Input validation error!', 500);
+        return;
+    }
 
-    if (removeIndex !== -1) {
-        res.json(devs[removeIndex], 200);
-        devs.splice(removeIndex, 1);
-    } else {
-        res.json(`Dev ${id} not found`, 404);
+    dbParams.Key = { 'uuid': uuid };
+
+    try {
+        await docClient.delete(dbParams).promise();
+
+        // P.S.: grazie anche a DynamoDB per non darci alcuna evidenza se l'elemento è stato eliminato o no
+        res.json('OK', 200);
+    } catch (err) {
+        res.json(err, 500);
     }
 });
 
 let handler = async (event, context) => {
     res.reset();
-    app.handle(event);
+
+    dbParams = {
+        TableName : 'devs',
+    }
+
+    await app.handle(event);
 
     return res.getResponse();
 };
